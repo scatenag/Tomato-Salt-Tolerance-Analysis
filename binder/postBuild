@@ -5,3 +5,4 @@
 echo "Installing R packages..."
 R -e "install.packages(c('igraph', 'RColorBrewer'), repos='https://cloud.r-project.org', quiet=TRUE)"
 echo "R packages installed successfully!"
+
