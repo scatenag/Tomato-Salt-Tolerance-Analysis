@@ -53,10 +53,14 @@ python scripts/figure_07_responsiveness/generate_figure_07.py
 python scripts/figure_08_regression_comparison/generate_figure_08.py
 ```
 
-### Interactive Notebook
+### Interactive Notebooks
 
 ```bash
+# Manuscript figures (main paper)
 jupyter notebook notebooks/MANUSCRIPT_FIGURES.ipynb
+
+# Supplementary materials figures
+jupyter notebook notebooks/SM_FIGURES.ipynb
 ```
 
 ---
@@ -66,9 +70,10 @@ jupyter notebook notebooks/MANUSCRIPT_FIGURES.ipynb
 ```
 Tomato-Salt-Tolerance-Analysis/
 ├── data/
-│   └── master_dataset.csv              # Primary experimental data
+│   └── master_dataset.csv              # Primary experimental data (all replicates)
 ├── notebooks/
-│   └── MANUSCRIPT_FIGURES.ipynb        # Interactive figure generation
+│   ├── MANUSCRIPT_FIGURES.ipynb        # Interactive figure generation (Figures 1-8)
+│   └── SM_FIGURES.ipynb                # Supplementary materials (Fig. S1-S4, Tab. S2)
 ├── scripts/
 │   ├── figure_01_pathway_activity/     # Figure 1: Pathway activity heatmap
 │   ├── figure_02_adaptive_differences/ # Figure 2: WR vs CV differences
@@ -78,6 +83,7 @@ Tomato-Salt-Tolerance-Analysis/
 │   ├── figure_06_variety_ranking/      # Figure 6: Tolerance ranking
 │   ├── figure_07_responsiveness/       # Figure 7: Parameter responsiveness
 │   ├── figure_08_regression_comparison/# Figure 8: Regression comparison
+│   ├── supplementary_figures/          # Supplementary figures (S1-S4, Tab. S2)
 │   ├── parameter_mapping.py            # Centralized parameter definitions
 │   └── unify_data_sources.py           # Data preprocessing pipeline
 ├── documentation/
@@ -97,8 +103,8 @@ Tomato-Salt-Tolerance-Analysis/
   - Control (C): 3.22 dS/m
   - Moderate stress (S1): 11 dS/m
   - Severe stress (S2): 21 dS/m
-- **Time points**: 4 (T1-T4)
-- **Replicates**: 3 per treatment
+- **Time points**: 12 DAT (Days After Transplant) for non-destructive measurements, 4 DAT for destructive measurements
+- **Replicates**: 6 per treatment (3-6 depending on timepoint)
 
 ---
 
@@ -115,6 +121,16 @@ Tomato-Salt-Tolerance-Analysis/
 | **Figure 7** | Parameter Responsiveness | `figure_07_responsiveness/generate_figure_07.py` |
 | **Figure 8** | Regression Comparison | `figure_08_regression_comparison/generate_figure_08.py` |
 
+## Supplementary Materials
+
+| Item | Description | Location |
+|------|-------------|----------|
+| **Fig. S1** | Osmotic Regulation/Ionic Balance | `supplementary_figures/` |
+| **Fig. S2** | Primary/Secondary Metabolism | `supplementary_figures/` |
+| **Fig. S3** | Hormonal System | `supplementary_figures/` |
+| **Fig. S4** | Morphology and Growth | `supplementary_figures/` |
+| **Tab. S2** | Parameter Scores (CV vs WR10) | `supplementary_figures/table_S2_parameter_scores.csv` |
+
 All figures are generated as PNG (300 DPI) and PDF.
 
 ---
@@ -125,12 +141,22 @@ All analyses use a single primary data file:
 
 - **File**: `data/master_dataset.csv`
 - **Content**: 68+ biological parameters measured across all genotype × treatment × timepoint combinations
+- **Rows**: 1173 (all biological replicates)
 
 No simulated or synthetic data is used.
 
 ---
 
 ## Statistical Methods
+
+### Methodological Note
+
+All calculations use **all biological replicates** directly (not aggregated by DAT), because:
+- Most parameters are from **destructive measurements** where each observation comes from a different plant (independent samples)
+- Using all replicates provides more robust statistical inference with higher statistical power
+- This is the standard approach in experimental biology publications
+
+### Statistical Tests
 
 - **Correlations**: Spearman rank correlation with significance testing
 - **ANOVA**: One-way ANOVA with F-statistic and effect size (η²)

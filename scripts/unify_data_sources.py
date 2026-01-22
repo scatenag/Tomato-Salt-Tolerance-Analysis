@@ -22,29 +22,26 @@ FIG3_DIR = ROOT_DIR / 'scripts' / 'figure_03_network'
 MASTER_DATA = DATA_DIR / 'master_dataset.csv'
 
 def load_primary_data():
+    """
+    Load primary data from master_dataset.csv.
+
+    Uses ALL REPLICATES directly (not aggregated by DAT) because:
+    - Most parameters are from destructive measurements (independent samples)
+    - Using all replicates provides more robust statistical inference
+    - This is the standard approach in experimental biology publications
+
+    Returns the raw dataframe with all replicates.
+    """
     if not MASTER_DATA.exists():
         raise FileNotFoundError(f"Master dataset not found: {MASTER_DATA}")
-    
+
     print(f"Loading master data from {MASTER_DATA.name}...")
     df_raw = pd.read_csv(MASTER_DATA)
-    
-    # Derive means for calculations requiring tabulated data (Fig 1, 3, 7)
-    # Group by all ID columns
-    id_cols = ['DAT', 'Species', 'Variety', 'Treatment', 'Phenological phase']
-    # Filter only numeric columns for mean
-    numeric_cols = df_raw.select_dtypes(include=[np.number]).columns
-    
-    print("Calculating means for unified analysis...")
-    df_means = df_raw.groupby(['DAT', 'Variety', 'Treatment']).agg({
-        col: 'mean' for col in numeric_cols if col not in ['Reply', 'DAT']
-    }).reset_index()
-    
-    # Re-add Species and Phenological phase (taking first value per group)
-    df_extra = df_raw.groupby(['DAT', 'Variety', 'Treatment'])[['Species', 'Phenological phase']].first().reset_index()
-    df_means = pd.merge(df_means, df_extra, on=['DAT', 'Variety', 'Treatment'])
-    
-    print(f"✓ Unified data ready: {len(df_means)} rows (derived from {len(df_raw)} raw replicates)")
-    return df_means
+
+    # Use all replicates directly - no DAT aggregation
+    # This is the statistically correct approach for destructive measurements
+    print(f"✓ Unified data ready: {len(df_raw)} rows (all replicates)")
+    return df_raw
 
 def derive_figure_1_data(df):
     """Generate pathway activity data (Fold Change vs Control)"""
