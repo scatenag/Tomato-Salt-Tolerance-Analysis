@@ -17,12 +17,11 @@ Journal of Experimental Botany (JXB)
 
 ---
 
-## Interactive Notebooks
+## Interactive Notebook
 
 | Notebook | Content | Run Online |
 |----------|---------|------------|
-| **[MANUSCRIPT_FIGURES.ipynb](notebooks/MANUSCRIPT_FIGURES.ipynb)** | Main paper figures (1-8) | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/scatenag/Tomato-Salt-Tolerance-Analysis/HEAD?labpath=notebooks%2FMANUSCRIPT_FIGURES.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/scatenag/Tomato-Salt-Tolerance-Analysis/blob/main/notebooks/MANUSCRIPT_FIGURES.ipynb) |
-| **[SM_FIGURES.ipynb](notebooks/SM_FIGURES.ipynb)** | Supplementary materials (Fig. S1-S4, Tab. S2) | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/scatenag/Tomato-Salt-Tolerance-Analysis/HEAD?labpath=notebooks%2FSM_FIGURES.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/scatenag/Tomato-Salt-Tolerance-Analysis/blob/main/notebooks/SM_FIGURES.ipynb) |
+| **[MANUSCRIPT_FIGURES.ipynb](notebooks/MANUSCRIPT_FIGURES.ipynb)** | All figures (1-8) + Supplementary (S1-S4, Tab. S2) | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/scatenag/Tomato-Salt-Tolerance-Analysis/HEAD?labpath=notebooks%2FMANUSCRIPT_FIGURES.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/scatenag/Tomato-Salt-Tolerance-Analysis/blob/main/notebooks/MANUSCRIPT_FIGURES.ipynb) |
 
 ---
 
@@ -63,14 +62,11 @@ python scripts/figure_07_responsiveness/generate_figure_07.py
 python scripts/figure_08_regression_comparison/generate_figure_08.py
 ```
 
-### Interactive Notebooks
+### Interactive Notebook
 
 ```bash
-# Manuscript figures (main paper)
+# All figures (manuscript + supplementary)
 jupyter notebook notebooks/MANUSCRIPT_FIGURES.ipynb
-
-# Supplementary materials figures
-jupyter notebook notebooks/SM_FIGURES.ipynb
 ```
 
 ---
@@ -82,8 +78,7 @@ Tomato-Salt-Tolerance-Analysis/
 ├── data/
 │   └── master_dataset.csv              # Primary experimental data (all replicates)
 ├── notebooks/
-│   ├── MANUSCRIPT_FIGURES.ipynb        # Interactive figure generation (Figures 1-8)
-│   └── SM_FIGURES.ipynb                # Supplementary materials (Fig. S1-S4, Tab. S2)
+│   └── MANUSCRIPT_FIGURES.ipynb        # All figures (1-8) + Supplementary (S1-S4, Tab. S2)
 ├── scripts/
 │   ├── figure_01_pathway_activity/     # Figure 1: Pathway activity heatmap
 │   ├── figure_02_adaptive_differences/ # Figure 2: WR vs CV differences

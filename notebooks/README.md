@@ -1,19 +1,18 @@
-# Reproducibility Notebooks
+# Reproducibility Notebook
 
-Interactive Jupyter notebooks for reproducing all manuscript and supplementary figures.
+Interactive Jupyter notebook for reproducing all manuscript and supplementary figures.
 
-## Available Notebooks
+## Notebook
 
-| Notebook | Description | Figures |
+| Notebook | Description | Content |
 |----------|-------------|---------|
-| **MANUSCRIPT_FIGURES.ipynb** | Main paper figures | Figures 1-8 |
-| **SM_FIGURES.ipynb** | Supplementary materials | Fig. S1-S4, Tab. S2 |
+| **MANUSCRIPT_FIGURES.ipynb** | Complete figure reproduction | Figures 1-8 + Fig. S1-S4 + Tab. S2 |
 
 ---
 
 ## Run in the Cloud
 
-No installation required - run the notebooks directly in your browser:
+No installation required - run the notebook directly in your browser:
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/scatenag/Tomato-Salt-Tolerance-Analysis/HEAD?labpath=notebooks%2FMANUSCRIPT_FIGURES.ipynb)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/scatenag/Tomato-Salt-Tolerance-Analysis/blob/main/notebooks/MANUSCRIPT_FIGURES.ipynb)
@@ -31,9 +30,9 @@ No installation required - run the notebooks directly in your browser:
 
 ## MANUSCRIPT_FIGURES.ipynb
 
-**Purpose**: Generate all 8 manuscript figures from primary data
+**Purpose**: Generate all manuscript and supplementary figures from primary data
 
-### Generates:
+### Manuscript Figures (1-8):
 
 | Figure | Description |
 |--------|-------------|
@@ -46,13 +45,7 @@ No installation required - run the notebooks directly in your browser:
 | **Figure 7** | Parameter Responsiveness Heatmap (WR10 vs CV) |
 | **Figure 8** | Regression Comparison (3-panel dose-response curves) |
 
----
-
-## SM_FIGURES.ipynb
-
-**Purpose**: Generate supplementary figures and tables
-
-### Generates:
+### Supplementary Materials:
 
 | Item | Description |
 |------|-------------|
@@ -61,12 +54,6 @@ No installation required - run the notebooks directly in your browser:
 | **Fig. S3** | Hormonal System - pathway activity heatmap |
 | **Fig. S4** | Morphology and Growth - pathway activity heatmap |
 | **Tab. S2** | Parameter Scores for CV and WR10 (F-statistic, η², % Change) |
-
-### Tab. S2 Output:
-- Formatted tables for CV and WR10
-- Side-by-side comparison heatmap
-- Summary statistics by category
-- CSV export: `table_S2_parameter_scores.csv`
 
 ---
 
