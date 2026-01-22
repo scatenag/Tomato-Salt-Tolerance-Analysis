@@ -23,12 +23,19 @@ ENV/
 # Generated Data/Results
 results/
 output/
-*.csv
-!data/*.csv  # Keep data files in data/ directory
 
 # Backup files
 *_backup_*.csv
 *_202*.csv  # Timestamped backups like *_20260108_102844.csv
+
+# CSV files (ignore all except primary data)
+/*.csv
+/scripts/**/*.csv
+
+# Keep only primary data file, ignore derived files
+!data/master_dataset.csv
+data/*_unified.csv
+data/summary_*.csv
 
 # Jupyter Notebook
 .ipynb_checkpoints
