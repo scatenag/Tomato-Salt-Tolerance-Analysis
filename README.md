@@ -8,6 +8,13 @@
 
 Complete reproducibility repository for the manuscript:
 
+
+**"A multilevel trait-integration framework identifies key predictors of tomato salt tolerance"**
+
+*Susanna Cialli, Giulia Carmassi, Guido Scatena, Rita Maggini, Luca Incrocci, Anna Mensuali, Alice Trivellini*
+
+Journal of Experimental Botany (JXB)
+
 ---
 
 ## Interactive Notebooks
@@ -16,14 +23,6 @@ Complete reproducibility repository for the manuscript:
 |----------|---------|------------|
 | **[MANUSCRIPT_FIGURES.ipynb](notebooks/MANUSCRIPT_FIGURES.ipynb)** | Main paper figures (1-8) | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/scatenag/Tomato-Salt-Tolerance-Analysis/HEAD?labpath=notebooks%2FMANUSCRIPT_FIGURES.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/scatenag/Tomato-Salt-Tolerance-Analysis/blob/main/notebooks/MANUSCRIPT_FIGURES.ipynb) |
 | **[SM_FIGURES.ipynb](notebooks/SM_FIGURES.ipynb)** | Supplementary materials (Fig. S1-S4, Tab. S2) | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/scatenag/Tomato-Salt-Tolerance-Analysis/HEAD?labpath=notebooks%2FSM_FIGURES.ipynb) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/scatenag/Tomato-Salt-Tolerance-Analysis/blob/main/notebooks/SM_FIGURES.ipynb) |
-
----
-
-**"A multilevel trait-integration framework identifies key predictors of tomato salt tolerance"**
-
-*Susanna Cialli, Giulia Carmassi, Guido Scatena, Rita Maggini, Luca Incrocci, Anna Mensuali, Alice Trivellini*
-
-Journal of Experimental Botany (JXB)
 
 ---
 
