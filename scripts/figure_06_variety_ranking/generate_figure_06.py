@@ -29,7 +29,7 @@ VARIETY_COLORS = {
     'WR2': '#FF0000',     # red
     'WR9': '#00BFFF',     # light blue (deep sky blue)
     'WR10': '#00FF00',    # green
-    'WR11': '#FFFF00',    # yellow
+    'WR11': '#DAA520',    # dark yellow (goldenrod) - more visible on white
     'WR14': '#9370DB'     # purple (medium purple)
 }
 

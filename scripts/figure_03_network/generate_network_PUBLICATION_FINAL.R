@@ -30,7 +30,13 @@ if (length(args) >= 2) {
   THRESHOLD_POS <- 0.35
   THRESHOLD_NEG <- -0.30
 }
+
+# New arguments for visibility toggles
+SHOW_INTRA <- if (length(args) >= 3) as.logical(args[3]) else TRUE
+SHOW_CROSS <- if (length(args) >= 4) as.logical(args[4]) else TRUE
+
 cat(sprintf("Thresholds: pos >= %.2f, neg <= %.2f\n", THRESHOLD_POS, THRESHOLD_NEG))
+cat(sprintf("Visibility: Intra=%s, Cross=%s\n", SHOW_INTRA, SHOW_CROSS))
 
 # Specific node order in the circle (from reference image)
 # Starting from Fv/Fm at top-left, clockwise
@@ -176,27 +182,7 @@ node_positions <- node_positions[match(nodes_ordered, node_positions$id), ]
 rownames(node_positions) <- NULL
 
 # ==============================================================================
-# 4. CALCULATE DEGREE FOR NODE SIZE
-# ==============================================================================
-
-g <- graph_from_data_frame(
-  d = edges_df[, c("source", "target")],
-  vertices = node_positions[, c("id", "level")],
-  directed = FALSE
-)
-
-node_degrees <- degree(g)
-node_positions$degree <- node_degrees[node_positions$id]
-
-# Scale node sizes
-size_min <- 4
-size_max <- 14
-node_positions$size <- size_min +
-  (node_positions$degree / max(node_positions$degree)) * (size_max - size_min)
-
-
-# ==============================================================================
-# 5. PREPARE EDGES
+# 4. PREPARE EDGES AND FILTER
 # ==============================================================================
 
 # Ensure data is clean
@@ -206,15 +192,17 @@ edges_df$source <- trimws(edges_df$source)
 edges_df$target <- trimws(edges_df$target)
 edges_df$correlation <- as.numeric(edges_df$correlation)
 
-# Create node -> level mapping
-node_level_map <- setNames(node_positions$level, node_positions$id)
-
-# FILTER ONLY STRONGER CORRELATIONS for easier interpretation
-# Threshold: |r| >= 0.35 (positive) or |r| >= 0.30 (negative)
+# FILTER ONLY STRONGER CORRELATIONS and apply visibility toggles
 cat(sprintf("Filtering strong correlations (|r| >= %.2f positive, |r| >= %.2f negative)...\n", THRESHOLD_POS, abs(THRESHOLD_NEG)))
 
 edges_filtered <- edges_df %>%
   filter(source %in% nodes_ordered & target %in% nodes_ordered) %>%
+  left_join(nodes_df %>% select(id, source_level = level), by = c("source" = "id")) %>%
+  left_join(nodes_df %>% select(id, target_level = level), by = c("target" = "id")) %>%
+  mutate(is_intra_level = source_level == target_level) %>%
+  filter(
+    (is_intra_level & SHOW_INTRA) | (!is_intra_level & SHOW_CROSS)
+  ) %>%
   filter(
     (correlation >= THRESHOLD_POS) | # Strong positive
       (correlation <= THRESHOLD_NEG) # Strong negative
@@ -222,38 +210,55 @@ edges_filtered <- edges_df %>%
 
 cat(sprintf("   Edges after filter: %d (from %d original)\n", nrow(edges_filtered), nrow(edges_df)))
 
+# ==============================================================================
+# 5. CALCULATE DEGREE FOR NODE SIZE (DYNAMIC)
+# ==============================================================================
+
+# Create graph based on FILTERED edges to get dynamic degree
+g <- graph_from_data_frame(
+  d = edges_filtered[, c("source", "target")],
+  vertices = node_positions[, c("id", "level")],
+  directed = FALSE
+)
+
+node_degrees <- degree(g)
+node_positions$degree <- node_degrees[node_positions$id]
+
+# Scale node sizes based on filtered degree
+size_min <- 4
+size_max <- 14
+max_deg <- max(node_positions$degree)
+
+if (max_deg > 0) {
+  node_positions$size <- size_min +
+    (node_positions$degree / max_deg) * (size_max - size_min)
+} else {
+  # If no edges, keep all nodes at minimum size
+  node_positions$size <- size_min
+}
+
+# ==============================================================================
+# 6. PREPARE EDGE PLOTTING DATA
+# ==============================================================================
+
+# Create node -> level mapping
+node_level_map <- setNames(node_positions$level, node_positions$id)
+
 # Prepare edges with colors
 edges_plot <- edges_filtered %>%
   mutate(
-    source_level = node_level_map[source],
-    target_level = node_level_map[target],
-    is_intra_level = source_level == target_level,
-    # DEBUG: Force check specific edges
-    is_nak = (source == "Na/K ratio leaves" & target == "Na/K ratio roots") | (target == "Na/K ratio leaves" & source == "Na/K ratio roots"),
-    is_aba_rwc = (source == "ABA (ng/mg)" & target == "Relative water content (%)") | (target == "ABA (ng/mg)" & source == "Relative water content (%)"),
-
     # Colors:
     # Positive Cross -> Red
     # Positive Intra -> Green
-    # Negative (ALL) -> Blue (user confirmed scarcity of intra-neg, simplify visual)
+    # Negative Cross -> Blue
+    # Negative Intra -> Dark Green (addressing user query)
     edge_color = case_when(
-      correlation < 0 ~ "#64B5F6", # Negative (Intra or Cross): Blue
-      is_intra_level ~ "#7CB342", # Positive Intra-level: Green
-      TRUE ~ "#E57373" # Positive Cross-level: Red
+      correlation < 0 & is_intra_level ~ "#33691E", # Negative Intra: Dark Green
+      correlation < 0 ~ "#64B5F6", # Negative Cross: Blue
+      is_intra_level ~ "#7CB342", # Positive Intra: Light Green
+      TRUE ~ "#E57373" # Positive Cross: Red
     )
   )
-
-# Debug prints for specific edges
-cat("\n--- DEBUG EDGE COLORS ---\n")
-debug_aba <- edges_plot %>% filter(is_aba_rwc)
-if (nrow(debug_aba) > 0) {
-  cat(sprintf("ABA-RWC: Corr=%.3f, Intra=%s, Color=%s\n", debug_aba$correlation[1], debug_aba$is_intra_level[1], debug_aba$edge_color[1]))
-}
-debug_nak <- edges_plot %>% filter(is_nak)
-if (nrow(debug_nak) > 0) {
-  cat(sprintf("Na/K-Na/K: Corr=%.3f, Intra=%s, Color=%s\n", debug_nak$correlation[1], debug_nak$is_intra_level[1], debug_nak$edge_color[1]))
-}
-cat("-------------------------\n\n")
 
 # Add coordinates
 edges_plot <- edges_plot %>%
@@ -404,32 +409,31 @@ p_legend_levels <- ggplot() +
 # Updated CORRELATIONS legend
 p_legend_corr <- ggplot() +
   # CORRELATIONS title - LARGER
-  annotate("text", x = 1.8, y = 5.3, label = "CORRELATIONS", fontface = "bold", size = 7) +
-  # Red line for Positive Cross-level
-  geom_segment(aes(x = 1, xend = 2.2, y = 3.5, yend = 3.5), color = "#E57373", linewidth = 5) +
-  annotate("text", x = 2.5, y = 3.5, label = sprintf("Positive Cross (r \u2265 %.2f)", THRESHOLD_POS), size = 5, hjust = 0) +
-  # Green line for Positive Intra-level
+  annotate("text", x = 1.8, y = 6.3, label = "CORRELATIONS", fontface = "bold", size = 7) +
+
+  # Cross-level (Red/Blue)
+  geom_segment(aes(x = 1, xend = 2.2, y = 5.0, yend = 5.0), color = "#E57373", linewidth = 5) +
+  annotate("text", x = 2.5, y = 5.0, label = sprintf("Positive Cross-level (r \u2265 %.2f)", THRESHOLD_POS), size = 5, hjust = 0) +
+  geom_segment(aes(x = 1, xend = 2.2, y = 4.0, yend = 4.0), color = "#64B5F6", linewidth = 5) +
+  annotate("text", x = 2.5, y = 4.0, label = sprintf("Negative Cross-level (r \u2264 %.2f)", THRESHOLD_NEG), size = 5, hjust = 0) +
+
+  # Intra-level (Greens)
   geom_segment(aes(x = 1, xend = 2.2, y = 2.5, yend = 2.5), color = "#7CB342", linewidth = 5) +
-  annotate("text", x = 2.5, y = 2.5, label = sprintf("Positive Intra (r \u2265 %.2f)", THRESHOLD_POS), size = 5, hjust = 0) +
-  # Blue line for Negative (All)
-  geom_segment(aes(x = 1, xend = 2.2, y = 1.5, yend = 1.5), color = "#64B5F6", linewidth = 5) +
-  annotate("text", x = 2.5, y = 1.5, label = sprintf("Negative (r \u2264 %.2f)", THRESHOLD_NEG), size = 5, hjust = 0) +
-  coord_cartesian(ylim = c(0.5, 5.8), xlim = c(0.5, 5.5)) +
+  annotate("text", x = 2.5, y = 2.5, label = sprintf("Positive Intra-level (r \u2265 %.2f)", THRESHOLD_POS), size = 5, hjust = 0) +
+  geom_segment(aes(x = 1, xend = 2.2, y = 1.5, yend = 1.5), color = "#33691E", linewidth = 5) +
+  annotate("text", x = 2.5, y = 1.5, label = sprintf("Negative Intra-level (r \u2264 %.2f)", THRESHOLD_NEG), size = 5, hjust = 0) +
+  coord_cartesian(ylim = c(0.5, 6.8), xlim = c(0.5, 6.5)) +
   theme_void() +
   theme(
     plot.margin = margin(0, 5, 0, 5)
   )
-
-# ==============================================================================
-# 9. COMBINE EVERYTHING WITH GRIDEXTRA
-# ==============================================================================
 
 # Combine the two legends horizontally
 p_legend <- arrangeGrob(
   p_legend_levels,
   p_legend_corr,
   ncol = 2,
-  widths = c(3, 1.2)
+  widths = c(3, 1.5)
 )
 
 # Combine main plot with legend - less white space
@@ -489,6 +493,26 @@ cat("Generating version without intra-level edges...\n")
 edges_plot_cross <- edges_plot %>%
   filter(!is_intra_level)
 
+# Recalculate degree and size for CROSS ONLY version (Dynamic)
+g_cross <- graph_from_data_frame(
+  d = edges_plot_cross[, c("source", "target")],
+  vertices = node_positions[, c("id", "level")],
+  directed = FALSE
+)
+
+node_degrees_cross <- degree(g_cross)
+node_positions_cross <- node_positions
+node_positions_cross$degree <- node_degrees_cross[node_positions_cross$id]
+
+# Scale node sizes based on cross-only degree
+max_deg_cross <- max(node_positions_cross$degree)
+if (max_deg_cross > 0) {
+  node_positions_cross$size <- size_min +
+    (node_positions_cross$degree / max_deg_cross) * (size_max - size_min)
+} else {
+  node_positions_cross$size <- size_min
+}
+
 # Main plot without intra-level
 p_main_cross <- ggplot() +
   # Edges (only cross-level)
@@ -501,7 +525,7 @@ p_main_cross <- ggplot() +
   scale_color_identity() +
   # Nodes
   geom_point(
-    data = node_positions,
+    data = node_positions_cross,
     aes(x = x, y = y, fill = color, size = size),
     shape = 21,
     color = "black",
@@ -511,7 +535,7 @@ p_main_cross <- ggplot() +
   scale_size_identity() +
   # Colored labels (without background)
   geom_text(
-    data = node_positions,
+    data = node_positions_cross,
     aes(
       x = label_x, y = label_y, label = label, color = color,
       angle = label_angle, hjust = hjust
