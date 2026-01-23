@@ -1,5 +1,6 @@
 graphviz
 libgraphviz-dev
 pkg-config
-r-base
-r-base-dev
+libxml2-dev
+libglpk-dev
+libgmp-dev

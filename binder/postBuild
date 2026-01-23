@@ -1,8 +1,0 @@
-#!/bin/bash
-# Post-build script for Binder - v2 (2026-01-22)
-# Install R packages for Figure 3 (network analysis)
-
-echo "Installing R packages..."
-R -e "install.packages(c('igraph', 'RColorBrewer'), repos='https://cloud.r-project.org', quiet=TRUE)"
-echo "R packages installed successfully!"
-
