@@ -1,0 +1,6 @@
+# R packages for Figure 3 (Correlation Network)
+install.packages("igraph", repos = "https://cloud.r-project.org")
+install.packages("RColorBrewer", repos = "https://cloud.r-project.org")
+install.packages("ggplot2", repos = "https://cloud.r-project.org")
+install.packages("dplyr", repos = "https://cloud.r-project.org")
+install.packages("gridExtra", repos = "https://cloud.r-project.org")
