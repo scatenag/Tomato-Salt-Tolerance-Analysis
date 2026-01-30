@@ -91,10 +91,13 @@ def derive_figure_7_data(df):
     """
     Generate parameter ranking data (ANOVA, Eta-squared, % Change).
 
-    All scores are PROPERLY NORMALIZED to 0-100 scale:
-    - f_stat_score: min-max normalized across all varieties/params (finite values only)
+    All scores are normalized to 0-100 scale using LOG-TRANSFORMATION:
+    - f_stat_score: log(1+F) / log(1+max_F) * 100 (compresses extreme values)
     - eta_sq_score: eta_squared * 100 (already 0-1, so this gives 0-100)
-    - pct_change_score: min-max normalized |%change| across all varieties/params
+    - pct_change_score: log(1+|%chg|) / log(1+max_|%chg|) * 100
+
+    Log-transformation is standard in statistics for skewed distributions,
+    compressing extreme values while preserving relative ordering.
     """
     print("Generating Figure 7 intermediate data...")
 
@@ -146,7 +149,7 @@ def derive_figure_7_data(df):
                 'pct_change_C_to_S2': pct_change,
             })
 
-    # PHASE 2: Calculate normalization ranges (excluding inf values)
+    # PHASE 2: Calculate max values for log-normalization (excluding inf)
     f_stats_finite = [r['f_statistic'] for r in raw_results
                       if np.isfinite(r['f_statistic']) and not np.isnan(r['f_statistic'])]
     pct_changes_abs = [abs(r['pct_change_C_to_S2']) for r in raw_results
@@ -155,22 +158,30 @@ def derive_figure_7_data(df):
     f_stat_max = max(f_stats_finite) if f_stats_finite else 1
     pct_change_max = max(pct_changes_abs) if pct_changes_abs else 1
 
-    print(f"   Normalization ranges: F-stat max={f_stat_max:.2f}, |%Change| max={pct_change_max:.2f}")
+    # For log normalization, we use the max finite value
+    # inf values will be assigned the max score (100)
+    log_f_max = np.log1p(f_stat_max)
+    log_pct_max = np.log1p(pct_change_max)
 
-    # PHASE 3: Apply normalization to create final scores (0-100)
+    print(f"   Raw ranges: F-stat max={f_stat_max:.2f}, |%Change| max={pct_change_max:.2f}")
+    print(f"   Log ranges: log(1+F_max)={log_f_max:.2f}, log(1+%Chg_max)={log_pct_max:.2f}")
+
+    # PHASE 3: Apply LOG-NORMALIZATION to create final scores (0-100)
     results = []
     for r in raw_results:
-        # F-statistic score: normalize to 0-100, inf values become 100
+        # F-statistic score: log-normalized, inf values become 100
         if np.isnan(r['f_statistic']) or not np.isfinite(r['f_statistic']):
             f_stat_score = 100.0  # inf or nan -> max score
         else:
-            f_stat_score = min(100.0, (r['f_statistic'] / f_stat_max) * 100.0)
+            f_stat_score = (np.log1p(r['f_statistic']) / log_f_max) * 100.0
 
         # Eta-squared score: already 0-1, multiply by 100 for 0-100 scale
+        # No log needed since eta_sq is bounded [0,1]
         eta_sq_score = r['eta_squared'] * 100.0
 
-        # % Change score: normalize |%change| to 0-100
-        pct_change_score = (abs(r['pct_change_C_to_S2']) / pct_change_max) * 100.0 if pct_change_max > 0 else 0
+        # % Change score: log-normalized |%change|
+        abs_pct = abs(r['pct_change_C_to_S2'])
+        pct_change_score = (np.log1p(abs_pct) / log_pct_max) * 100.0 if log_pct_max > 0 else 0
 
         results.append({
             **r,
@@ -183,7 +194,7 @@ def derive_figure_7_data(df):
     output_path = DATA_DIR / 'parameter_ranking_unified.csv'
     output_df.to_csv(output_path, index=False)
     print(f"✓ Saved to {output_path}")
-    print(f"   All scores normalized to 0-100 range")
+    print(f"   All scores log-normalized to 0-100 range")
 
 def derive_figure_3_data(df):
     """Generate network nodes and edges (Spearman correlation)"""
