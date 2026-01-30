@@ -395,8 +395,8 @@ def main():
             is_top_row = (row_idx == 0)  # Only first row shows column titles
             is_first_col = (col_idx == 0)  # Only first column shows Y-label
             is_bottom_row = (row_idx == 3)  # Only last row shows X labels
-            # Legend only for first row (a, b, c)
-            show_legend = (row_idx == 0)
+            # Legend only for panel l) (last row, first column)
+            show_legend = (row_idx == 3 and col_idx == 0)
 
             print(f"  Plotting panel {panel_label}: {metric} - {treatment}")
             plot_timeseries(ax, df, df_raw, metric, treatment, panel_label, is_top_row, is_first_col, is_bottom_row, show_legend, y_limits, global_max_dat)
