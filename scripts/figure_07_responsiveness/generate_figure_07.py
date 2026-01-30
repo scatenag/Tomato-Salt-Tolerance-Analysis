@@ -6,13 +6,10 @@ Two-panel figure showing parameter responsiveness ranking:
 a) WR10 - Best performing wild accession
 b) CV - Cultivated variety
 
-Score calculation (consistent with Table S2):
-  Combined Score = (F_score × 0.4) + (η²_score × 0.4) + (%Change_score × 0.2)
-
-The heatmap shows:
-- Row 1: F-statistic contribution (score × 0.4)
-- Row 2: Effect size η² contribution (score × 0.4)
-- Row 3: % Change contribution (score × 0.2)
+The heatmap shows raw (unweighted) statistical metrics:
+- Row 1: F-statistic (from one-way ANOVA)
+- Row 2: Effect size η² (proportion of variance explained, as %)
+- Row 3: % Change (Control → S2)
 
 Note: Combined Score is not shown (already in Table S2)
 
@@ -20,7 +17,7 @@ Modifications from original:
 - Remove ranking numbers above heatmap (#9, #10, etc.)
 - Increase all font sizes
 - Match category label colors with Figure 6
-- Use weighted contributions matching Table S2 formula
+- Show raw parameter values without coefficient weighting
 """
 
 import pandas as pd
@@ -112,14 +109,15 @@ def plot_heatmap(ax, df_ranking, variety, panel_label, show_yticklabels=True, sh
 
     plot_df = pd.DataFrame(plot_params)
 
-    # Prepare matrix for heatmap - apply weights from Table S2 formula
-    # Combined Score = (F_score × 0.4) + (η²_score × 0.4) + (%Change_score × 0.2)
+    # Prepare matrix for heatmap - show raw parameter values (unweighted)
     # Note: Combined Score not shown here (already in Table S2)
-    f_contrib = plot_df['f_stat_score'].values * 0.4
-    eta_contrib = plot_df['eta_sq_score'].values * 0.4
-    pct_contrib = plot_df['pct_change_score'].values * 0.2
+    f_raw = plot_df['f_statistic'].values  # Raw F-statistic
+    # Cap infinite F-statistics to a reasonable max for display
+    f_raw = np.clip(f_raw, 0, 1000)
+    eta_raw = plot_df['eta_squared'].values * 100  # η² as percentage
+    pct_raw = np.abs(plot_df['pct_change_C_to_S2'].values)  # Absolute % change
 
-    scores = np.column_stack([f_contrib, eta_contrib, pct_contrib])
+    scores = np.column_stack([f_raw, eta_raw, pct_raw])
 
     # Replace NaN with 0
     scores = np.nan_to_num(scores, nan=0.0)
@@ -127,12 +125,12 @@ def plot_heatmap(ax, df_ranking, variety, panel_label, show_yticklabels=True, sh
     # Abbreviated parameter names
     param_labels = [p.split('(')[0].strip() for p in PARAMETER_ORDER]
 
-    # Metrics labels - weighted contributions (MUCH LARGER FONT)
+    # Metrics labels - raw values (MUCH LARGER FONT)
     # Combined Score not shown (already in Table S2)
-    metric_labels = ['F-statistic\n(×0.4)', 'Effect size η²\n(×0.4)', '% Change\n(×0.2)']
+    metric_labels = ['F-statistic', 'Effect size η²\n(%)', '% Change']
 
-    # Dynamic vmax based on data (Combined Score can be >> 100)
-    vmax_val = max(50, np.nanmax(scores))  # At least 50, or data max
+    # Dynamic vmax based on data (F-statistic can be >> 100)
+    vmax_val = max(100, np.nanmax(scores))  # At least 100, or data max
 
     # Create heatmap - LARGER FONTS
     sns.heatmap(
@@ -142,7 +140,7 @@ def plot_heatmap(ax, df_ranking, variety, panel_label, show_yticklabels=True, sh
         cmap='YlOrRd',
         vmin=0,
         vmax=vmax_val,
-        cbar_kws={'label': 'Weighted Score', 'shrink': 0.6},
+        cbar_kws={'label': 'Value', 'shrink': 0.6},
         linewidths=0.5,
         linecolor='white',
         ax=ax,
@@ -233,7 +231,7 @@ def main():
     cbar = ax2.collections[0].colorbar
     if cbar is not None:
         cbar.ax.tick_params(labelsize=16)  # Increased from 14
-        cbar.set_label('Weighted Score', fontsize=18, fontweight='bold')  # Updated label
+        cbar.set_label('Value', fontsize=18, fontweight='bold')
 
     # DO NOT use tight_layout because it overrides GridSpec
 
