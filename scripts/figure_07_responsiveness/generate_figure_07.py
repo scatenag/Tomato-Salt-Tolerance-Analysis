@@ -13,7 +13,8 @@ The heatmap shows:
 - Row 1: F-statistic contribution (score × 0.4)
 - Row 2: Effect size η² contribution (score × 0.4)
 - Row 3: % Change contribution (score × 0.2)
-- Row 4: Combined Score (sum of above)
+
+Note: Combined Score is not shown (already in Table S2)
 
 Modifications from original:
 - Remove ranking numbers above heatmap (#9, #10, etc.)
@@ -113,12 +114,12 @@ def plot_heatmap(ax, df_ranking, variety, panel_label, show_yticklabels=True, sh
 
     # Prepare matrix for heatmap - apply weights from Table S2 formula
     # Combined Score = (F_score × 0.4) + (η²_score × 0.4) + (%Change_score × 0.2)
+    # Note: Combined Score not shown here (already in Table S2)
     f_contrib = plot_df['f_stat_score'].values * 0.4
     eta_contrib = plot_df['eta_sq_score'].values * 0.4
     pct_contrib = plot_df['pct_change_score'].values * 0.2
-    combined = f_contrib + eta_contrib + pct_contrib
 
-    scores = np.column_stack([f_contrib, eta_contrib, pct_contrib, combined])
+    scores = np.column_stack([f_contrib, eta_contrib, pct_contrib])
 
     # Replace NaN with 0
     scores = np.nan_to_num(scores, nan=0.0)
@@ -127,7 +128,8 @@ def plot_heatmap(ax, df_ranking, variety, panel_label, show_yticklabels=True, sh
     param_labels = [p.split('(')[0].strip() for p in PARAMETER_ORDER]
 
     # Metrics labels - weighted contributions (MUCH LARGER FONT)
-    metric_labels = ['F-statistic\n(×0.4)', 'Effect size η²\n(×0.4)', '% Change\n(×0.2)', 'Combined\nScore']
+    # Combined Score not shown (already in Table S2)
+    metric_labels = ['F-statistic\n(×0.4)', 'Effect size η²\n(×0.4)', '% Change\n(×0.2)']
 
     # Dynamic vmax based on data (Combined Score can be >> 100)
     vmax_val = max(50, np.nanmax(scores))  # At least 50, or data max
@@ -207,7 +209,7 @@ def main():
     # Panel a) has Y labels but NO colorbar
     # Panel b) has colorbar but NO Y labels
     # So they should have the same final width
-    # Now with 4 rows (3 weighted contributions + Combined Score)
+    # Now with 3 rows (weighted contributions only, Combined Score in Table S2)
     print("\n🎨 Creating 2-panel figure...")
     fig = plt.figure(figsize=(24, 10))  # Taller for 4 rows
 
