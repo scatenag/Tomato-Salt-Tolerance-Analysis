@@ -6,10 +6,13 @@ Two-panel figure showing parameter responsiveness ranking:
 a) WR10 - Best performing wild accession
 b) CV - Cultivated variety
 
-The heatmap shows raw (unweighted) statistical metrics:
-- Row 1: F-statistic (from one-way ANOVA)
-- Row 2: Effect size η² (proportion of variance explained, as %)
-- Row 3: % Change (Control → S2)
+The heatmap shows raw (unweighted) statistical metrics with ROW-WISE normalization:
+- Row 1: F-statistic (from one-way ANOVA) - scale 0-1000
+- Row 2: Effect size η² (proportion of variance explained) - scale 0-100%
+- Row 3: % Change (Control → S2) - scale varies by actual data
+
+Each row uses its own color scale to ensure all metrics are visually comparable.
+Values displayed are raw (unscaled), but colors reflect position within each metric.
 
 Note: Combined Score is not shown (already in Table S2)
 
@@ -18,6 +21,7 @@ Modifications from original:
 - Increase all font sizes
 - Match category label colors with Figure 6
 - Show raw parameter values without coefficient weighting
+- ROW-WISE NORMALIZATION: Each metric row has its own color scale
 """
 
 import pandas as pd
@@ -81,33 +85,48 @@ def load_ranking_data():
     return df_ranking
 
 
-def compute_global_vmax(df_ranking, varieties=['WR10', 'CV']):
+def compute_row_ranges(df_ranking, varieties=['WR10', 'CV']):
     """
-    Compute global vmax across all varieties for consistent color scale.
+    Compute min/max for each metric row across all varieties.
+    This allows row-wise normalization so each metric uses its own color scale.
+
+    Returns dict with 'f_stat', 'eta_sq', 'pct_change' keys, each containing (min, max).
     """
-    all_values = []
+    f_values = []
+    eta_values = []
+    pct_values = []
+
     for variety in varieties:
         subset = df_ranking[df_ranking['variety'] == variety].copy()
         for param in PARAMETER_ORDER:
             param_row = subset[subset['parameter'] == param]
             if len(param_row) > 0:
                 row = param_row.iloc[0]
-                f_raw = np.clip(row['f_statistic'], 0, 1000)
-                eta_raw = row['eta_squared'] * 100
-                pct_raw = np.abs(row['pct_change_C_to_S2'])
-                all_values.extend([f_raw, eta_raw, pct_raw])
+                f_values.append(np.clip(row['f_statistic'], 0, 1000))
+                eta_values.append(row['eta_squared'] * 100)
+                pct_values.append(np.abs(row['pct_change_C_to_S2']))
 
-    all_values = np.array(all_values)
-    all_values = np.nan_to_num(all_values, nan=0.0)
-    return max(100, np.nanmax(all_values))
+    f_values = np.nan_to_num(f_values, nan=0.0)
+    eta_values = np.nan_to_num(eta_values, nan=0.0)
+    pct_values = np.nan_to_num(pct_values, nan=0.0)
+
+    return {
+        'f_stat': (0, max(1, np.max(f_values))),
+        'eta_sq': (0, max(1, np.max(eta_values))),
+        'pct_change': (0, max(1, np.max(pct_values)))
+    }
 
 
-def plot_heatmap(ax, df_ranking, variety, panel_label, show_yticklabels=True, show_colorbar=True, vmax_global=None):
+def plot_heatmap(ax, df_ranking, variety, panel_label, show_yticklabels=True, show_colorbar=True, row_ranges=None):
     """
-    Plot heatmap for a variety
+    Plot heatmap for a variety with ROW-WISE NORMALIZATION.
+
+    Each metric row (F-stat, η², % Change) is normalized to its own 0-1 scale
+    for coloring, but displays raw values as annotations.
+
     show_yticklabels: show Y axis labels (only for panel a)
     show_colorbar: show colorbar (only for panel b)
-    vmax_global: shared vmax across all panels for consistent color scale
+    row_ranges: dict with min/max for each metric (for consistent normalization across panels)
     """
     # Filter by variety
     subset = df_ranking[df_ranking['variety'] == variety].copy()
@@ -131,76 +150,109 @@ def plot_heatmap(ax, df_ranking, variety, panel_label, show_yticklabels=True, sh
 
     plot_df = pd.DataFrame(plot_params)
 
-    # Prepare matrix for heatmap - show raw parameter values (unweighted)
-    # Note: Combined Score not shown here (already in Table S2)
-    f_raw = plot_df['f_statistic'].values  # Raw F-statistic
-    # Cap infinite F-statistics to a reasonable max for display
-    f_raw = np.clip(f_raw, 0, 1000)
+    # Prepare raw values for annotations
+    f_raw = plot_df['f_statistic'].values
+    f_raw = np.clip(f_raw, 0, 1000)  # Cap infinite values
     eta_raw = plot_df['eta_squared'].values * 100  # η² as percentage
     pct_raw = np.abs(plot_df['pct_change_C_to_S2'].values)  # Absolute % change
 
-    scores = np.column_stack([f_raw, eta_raw, pct_raw])
-
     # Replace NaN with 0
-    scores = np.nan_to_num(scores, nan=0.0)
+    f_raw = np.nan_to_num(f_raw, nan=0.0)
+    eta_raw = np.nan_to_num(eta_raw, nan=0.0)
+    pct_raw = np.nan_to_num(pct_raw, nan=0.0)
+
+    # Store raw values for annotations
+    raw_values = np.column_stack([f_raw, eta_raw, pct_raw])
+
+    # ROW-WISE NORMALIZATION: normalize each metric to 0-1 scale for coloring
+    if row_ranges:
+        f_min, f_max = row_ranges['f_stat']
+        eta_min, eta_max = row_ranges['eta_sq']
+        pct_min, pct_max = row_ranges['pct_change']
+    else:
+        f_min, f_max = 0, max(1, np.max(f_raw))
+        eta_min, eta_max = 0, max(1, np.max(eta_raw))
+        pct_min, pct_max = 0, max(1, np.max(pct_raw))
+
+    # Normalize to 0-1 for coloring
+    f_norm = (f_raw - f_min) / (f_max - f_min) if f_max > f_min else np.zeros_like(f_raw)
+    eta_norm = (eta_raw - eta_min) / (eta_max - eta_min) if eta_max > eta_min else np.zeros_like(eta_raw)
+    pct_norm = (pct_raw - pct_min) / (pct_max - pct_min) if pct_max > pct_min else np.zeros_like(pct_raw)
+
+    normalized_scores = np.column_stack([f_norm, eta_norm, pct_norm])
 
     # Abbreviated parameter names
     param_labels = [p.split('(')[0].strip() for p in PARAMETER_ORDER]
 
-    # Metrics labels - raw values (MUCH LARGER FONT)
-    # Combined Score not shown (already in Table S2)
-    metric_labels = ['F-statistic', 'Effect size η²\n(%)', '% Change']
+    # Metrics labels with actual ranges shown
+    metric_labels = [
+        f'F-statistic\n(0-{f_max:.0f})',
+        f'Effect size η²\n(0-{eta_max:.0f}%)',
+        f'% Change\n(0-{pct_max:.0f}%)'
+    ]
 
-    # Use global vmax for consistent color scale across panels
-    vmax_val = vmax_global if vmax_global is not None else max(100, np.nanmax(scores))
+    # Create heatmap with normalized values (0-1 scale for all rows)
+    # But we'll add custom annotations with raw values
+    im = ax.imshow(normalized_scores.T, cmap='YlOrRd', aspect='auto', vmin=0, vmax=1)
 
-    # Create heatmap - LARGER FONTS
-    sns.heatmap(
-        scores.T,
-        annot=True,
-        fmt='.1f',
-        cmap='YlOrRd',
-        vmin=0,
-        vmax=vmax_val,
-        cbar_kws={'label': 'Value', 'shrink': 0.6},
-        linewidths=0.5,
-        linecolor='white',
-        ax=ax,
-        xticklabels=param_labels,
-        yticklabels=metric_labels if show_yticklabels else False,
-        cbar=show_colorbar,
-        annot_kws={'fontsize': 12, 'fontweight': 'bold'}  # Slightly smaller for 4 rows
-    )
+    # Add gridlines
+    ax.set_xticks(np.arange(normalized_scores.shape[0]+1)-.5, minor=True)
+    ax.set_yticks(np.arange(normalized_scores.shape[1]+1)-.5, minor=True)
+    ax.grid(which="minor", color="white", linestyle='-', linewidth=2)
+    ax.tick_params(which="minor", bottom=False, left=False)
 
-    # Axis labels (LARGER FONT) - only for panel a
+    # Add raw value annotations
+    for i in range(raw_values.shape[0]):  # columns (parameters)
+        for j in range(raw_values.shape[1]):  # rows (metrics)
+            raw_val = raw_values[i, j]
+            norm_val = normalized_scores[i, j]
+            # Choose text color based on background intensity
+            text_color = 'white' if norm_val > 0.6 else 'black'
+            # Format: show integer if >= 100, one decimal otherwise
+            if raw_val >= 100:
+                text = f'{raw_val:.0f}'
+            else:
+                text = f'{raw_val:.1f}'
+            ax.text(i, j, text, ha='center', va='center',
+                   fontsize=11, fontweight='bold', color=text_color)
+
+    # Set tick labels
+    ax.set_xticks(np.arange(len(param_labels)))
+    ax.set_xticklabels(param_labels, rotation=45, ha='right', fontsize=14, fontweight='bold')
+
     if show_yticklabels:
+        ax.set_yticks(np.arange(len(metric_labels)))
+        ax.set_yticklabels(metric_labels, rotation=0, fontsize=14, fontweight='bold')
         ax.set_ylabel('Metric', fontsize=16, fontweight='bold')
     else:
+        ax.set_yticks([])
         ax.set_ylabel('', fontsize=0)
-    ax.set_xlabel('', fontsize=0)  # Remove xlabel
 
-    # Tick labels (LARGER FONT)
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right', fontsize=14, fontweight='bold')
-    if show_yticklabels:
-        ax.set_yticklabels(ax.get_yticklabels(), rotation=0, fontsize=16, fontweight='bold')
+    ax.set_xlabel('', fontsize=0)
 
-    # REMOVED: ranking numbers above parameters (as requested)
+    # Add colorbar if requested
+    if show_colorbar:
+        cbar = plt.colorbar(im, ax=ax, shrink=0.6, pad=0.02)
+        cbar.set_label('Relative intensity\n(row-normalized)', fontsize=14, fontweight='bold')
+        cbar.ax.tick_params(labelsize=12)
+        cbar.set_ticks([0, 0.5, 1])
+        cbar.set_ticklabels(['Low', 'Medium', 'High'])
 
     # Add separator lines between categories
-    category_boundaries = [4, 8]
+    category_boundaries = [3.5, 7.5]  # Between param indices (0-based)
     for boundary in category_boundaries:
         ax.axvline(x=boundary, color='black', linewidth=3, linestyle='-')
 
     # Panel label "a)" or "b)" AT TOP (above categories)
-    y_panel_pos = -0.45  # Closer position
+    y_panel_pos = -0.55  # Position above heatmap
     ax.text(-0.5, y_panel_pos, f'{panel_label})',
-           ha='left', va='bottom', fontsize=20, fontweight='bold')
+           ha='left', va='bottom', fontsize=20, fontweight='bold',
+           transform=ax.get_yaxis_transform())
 
-    # Add category labels BELOW "a)" and "b)" but above the heatmap
-    # FULL NAMES ON TWO LINES - MUCH LARGER FONTS
-    y_category_pos = -0.25  # Position for two-line text
+    # Add category labels ABOVE the heatmap
+    y_category_pos = -0.35  # Position for category labels
     for cat_name, (start, end) in CATEGORY_POSITIONS.items():
-        mid_pos = (start + end) / 2
+        mid_pos = (start + end) / 2 - 0.5  # Adjust for 0-based indexing
         # Full name on two lines
         if cat_name == 'Performance Maintenance':
             display_name = 'Performance\nMaintenance'
@@ -209,10 +261,11 @@ def plot_heatmap(ax, df_ranking, variety, panel_label, show_yticklabels=True, sh
         else:  # Stress Marker Response
             display_name = 'Stress Marker\nResponse'
         ax.text(mid_pos, y_category_pos, display_name,
-               ha='center', va='bottom', fontsize=16, fontweight='bold',
+               ha='center', va='bottom', fontsize=14, fontweight='bold',
                linespacing=0.85,
                color=CATEGORY_COLORS[cat_name],
-               bbox=dict(boxstyle='round,pad=0.4', facecolor='white',
+               transform=ax.get_xaxis_transform(),
+               bbox=dict(boxstyle='round,pad=0.3', facecolor='white',
                         edgecolor=CATEGORY_COLORS[cat_name], linewidth=2.5))
 
 
@@ -225,40 +278,33 @@ def main():
     print("\n📊 Loading ranking data...")
     df_ranking = load_ranking_data()
 
-    # Compute global vmax for consistent color scale across both panels
-    print("\n📏 Computing global vmax for consistent color scale...")
-    vmax_global = compute_global_vmax(df_ranking, varieties=['WR10', 'CV'])
-    print(f"   Global vmax = {vmax_global:.1f}")
+    # Compute row ranges for consistent normalization across both panels
+    print("\n📏 Computing row ranges for row-wise normalization...")
+    row_ranges = compute_row_ranges(df_ranking, varieties=['WR10', 'CV'])
+    print(f"   F-statistic range: 0 - {row_ranges['f_stat'][1]:.1f}")
+    print(f"   η² range: 0 - {row_ranges['eta_sq'][1]:.1f}%")
+    print(f"   % Change range: 0 - {row_ranges['pct_change'][1]:.1f}%")
 
     # Create figure with GridSpec to balance widths
     # Panel a) has Y labels but NO colorbar
     # Panel b) has colorbar but NO Y labels
-    # So they should have the same final width
-    # Now with 3 rows (weighted contributions only, Combined Score in Table S2)
-    print("\n🎨 Creating 2-panel figure...")
-    fig = plt.figure(figsize=(24, 10))  # Taller for 4 rows
+    print("\n🎨 Creating 2-panel figure with row-normalized heatmaps...")
+    fig = plt.figure(figsize=(24, 8))  # Slightly shorter for 3 rows
 
     # GridSpec: panel a narrower (no colorbar), panel b wider (with colorbar)
-    # Y labels of a) ~= colorbar space of b)
-    gs = fig.add_gridspec(1, 2, width_ratios=[1, 1.08], wspace=0.15,
-                          top=0.85, bottom=0.22, left=0.06, right=0.95)
+    gs = fig.add_gridspec(1, 2, width_ratios=[1, 1.12], wspace=0.08,
+                          top=0.82, bottom=0.25, left=0.08, right=0.92)
 
     ax1 = fig.add_subplot(gs[0])
     ax2 = fig.add_subplot(gs[1])
 
     # Panel a) WR10 - with Y labels, without colorbar
     print("  Plotting panel a: WR10")
-    plot_heatmap(ax1, df_ranking, 'WR10', 'a', show_yticklabels=True, show_colorbar=False, vmax_global=vmax_global)
+    plot_heatmap(ax1, df_ranking, 'WR10', 'a', show_yticklabels=True, show_colorbar=False, row_ranges=row_ranges)
 
     # Panel b) CV - without Y labels, with colorbar
     print("  Plotting panel b: CV")
-    plot_heatmap(ax2, df_ranking, 'CV', 'b', show_yticklabels=False, show_colorbar=True, vmax_global=vmax_global)
-
-    # Increase colorbar label font - EVEN LARGER
-    cbar = ax2.collections[0].colorbar
-    if cbar is not None:
-        cbar.ax.tick_params(labelsize=16)  # Increased from 14
-        cbar.set_label('Value', fontsize=18, fontweight='bold')
+    plot_heatmap(ax2, df_ranking, 'CV', 'b', show_yticklabels=False, show_colorbar=True, row_ranges=row_ranges)
 
     # DO NOT use tight_layout because it overrides GridSpec
 
