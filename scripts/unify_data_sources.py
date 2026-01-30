@@ -88,30 +88,39 @@ def derive_figure_1_data(df):
     print(f"✓ Saved to {output_path}")
 
 def derive_figure_7_data(df):
-    """Generate parameter ranking data (ANOVA, Eta-squared, % Change)"""
+    """
+    Generate parameter ranking data (ANOVA, Eta-squared, % Change).
+
+    All scores are PROPERLY NORMALIZED to 0-100 scale:
+    - f_stat_score: min-max normalized across all varieties/params (finite values only)
+    - eta_sq_score: eta_squared * 100 (already 0-1, so this gives 0-100)
+    - pct_change_score: min-max normalized |%change| across all varieties/params
+    """
     print("Generating Figure 7 intermediate data...")
-    
-    results = []
-    
+
     # Only use parameters defined in categories
     params = [p for p in PARAMETER_CATEGORIES.keys() if p in df.columns]
-    
+
+    # PHASE 1: Calculate all raw metrics first
+    raw_results = []
+
     for variety in df['Variety'].unique():
         v_data = df[df['Variety'] == variety]
-        
+
         for param in params:
             # Prepare data groups for ANOVA
             groups = [v_data[v_data['Treatment'] == t][param].dropna() for t in ['C', 'S1', 'S2']]
             groups = [g for g in groups if not g.empty]
-            
-            if len(groups) < 2: continue
-            
+
+            if len(groups) < 2:
+                continue
+
             # ANOVA
             try:
                 f_stat, p_val = stats.f_oneway(*groups)
             except:
                 f_stat, p_val = np.nan, np.nan
-            
+
             # Eta-squared = SS_between / SS_total
             all_vals = pd.concat(groups)
             if len(all_vals) > 0:
@@ -121,16 +130,13 @@ def derive_figure_7_data(df):
                 eta_sq = ss_between / ss_total if ss_total != 0 else 0
             else:
                 eta_sq = 0
-            
+
             # % Change C to S2
             mean_c = v_data[v_data['Treatment'] == 'C'][param].mean()
             mean_s2 = v_data[v_data['Treatment'] == 'S2'][param].mean()
             pct_change = ((mean_s2 - mean_c) / mean_c * 100) if pd.notna(mean_c) and mean_c != 0 else 0
-            
-            # Normalized scores (0-100) for heatmap
-            # Handled in the plotting script, but we'll provide the raw metrics
-            
-            results.append({
+
+            raw_results.append({
                 'parameter': param,
                 'variety': variety,
                 'category': PARAMETER_CATEGORIES[param],
@@ -138,15 +144,46 @@ def derive_figure_7_data(df):
                 'p_value': p_val,
                 'eta_squared': eta_sq,
                 'pct_change_C_to_S2': pct_change,
-                'f_stat_score': min(100, f_stat * 10), # Heuristic matching original
-                'eta_sq_score': eta_sq * 100,
-                'pct_change_score': abs(pct_change) # Heuristic matching original
             })
-            
+
+    # PHASE 2: Calculate normalization ranges (excluding inf values)
+    f_stats_finite = [r['f_statistic'] for r in raw_results
+                      if np.isfinite(r['f_statistic']) and not np.isnan(r['f_statistic'])]
+    pct_changes_abs = [abs(r['pct_change_C_to_S2']) for r in raw_results
+                       if not np.isnan(r['pct_change_C_to_S2'])]
+
+    f_stat_max = max(f_stats_finite) if f_stats_finite else 1
+    pct_change_max = max(pct_changes_abs) if pct_changes_abs else 1
+
+    print(f"   Normalization ranges: F-stat max={f_stat_max:.2f}, |%Change| max={pct_change_max:.2f}")
+
+    # PHASE 3: Apply normalization to create final scores (0-100)
+    results = []
+    for r in raw_results:
+        # F-statistic score: normalize to 0-100, inf values become 100
+        if np.isnan(r['f_statistic']) or not np.isfinite(r['f_statistic']):
+            f_stat_score = 100.0  # inf or nan -> max score
+        else:
+            f_stat_score = min(100.0, (r['f_statistic'] / f_stat_max) * 100.0)
+
+        # Eta-squared score: already 0-1, multiply by 100 for 0-100 scale
+        eta_sq_score = r['eta_squared'] * 100.0
+
+        # % Change score: normalize |%change| to 0-100
+        pct_change_score = (abs(r['pct_change_C_to_S2']) / pct_change_max) * 100.0 if pct_change_max > 0 else 0
+
+        results.append({
+            **r,
+            'f_stat_score': round(f_stat_score, 1),
+            'eta_sq_score': round(eta_sq_score, 1),
+            'pct_change_score': round(pct_change_score, 1),
+        })
+
     output_df = pd.DataFrame(results)
     output_path = DATA_DIR / 'parameter_ranking_unified.csv'
     output_df.to_csv(output_path, index=False)
     print(f"✓ Saved to {output_path}")
+    print(f"   All scores normalized to 0-100 range")
 
 def derive_figure_3_data(df):
     """Generate network nodes and edges (Spearman correlation)"""
