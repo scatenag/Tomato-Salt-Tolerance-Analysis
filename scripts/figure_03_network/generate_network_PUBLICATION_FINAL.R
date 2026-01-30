@@ -410,8 +410,8 @@ p_legend_levels <- ggplot() +
 
 # Updated CORRELATIONS legend
 p_legend_corr <- ggplot() +
-  # CORRELATIONS title - LARGER
-  annotate("text", x = 1.8, y = 6.3, label = "CORRELATIONS", fontface = "bold", size = 7) +
+  # CORRELATIONS title - LARGER - shifted right for visibility
+  annotate("text", x = 2.2, y = 6.3, label = "CORRELATIONS", fontface = "bold", size = 7) +
 
   # Cross-level (Red/Blue)
   geom_segment(aes(x = 1, xend = 2.2, y = 5.0, yend = 5.0), color = "#E57373", linewidth = 5) +
@@ -556,7 +556,8 @@ p_main_cross <- ggplot() +
 
 # CORRELATIONS legend without intra-level (only red and blue) - LARGER FONTS
 p_legend_corr_cross <- ggplot() +
-  annotate("text", x = 1.8, y = 5.3, label = "CORRELATIONS", fontface = "bold", size = 7) +
+  # Shifted right for visibility
+  annotate("text", x = 2.2, y = 5.3, label = "CORRELATIONS", fontface = "bold", size = 7) +
   geom_segment(aes(x = 1, xend = 2.2, y = 3.5, yend = 3.5), color = "#E57373", linewidth = 5) +
   annotate("text", x = 2.5, y = 3.5, label = sprintf("Positive (r \u2265 %.2f)", THRESHOLD_POS), size = 5, hjust = 0) +
   geom_segment(aes(x = 1, xend = 2.2, y = 2.5, yend = 2.5), color = "#64B5F6", linewidth = 5) +

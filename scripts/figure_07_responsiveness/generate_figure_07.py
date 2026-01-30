@@ -81,11 +81,33 @@ def load_ranking_data():
     return df_ranking
 
 
-def plot_heatmap(ax, df_ranking, variety, panel_label, show_yticklabels=True, show_colorbar=True):
+def compute_global_vmax(df_ranking, varieties=['WR10', 'CV']):
+    """
+    Compute global vmax across all varieties for consistent color scale.
+    """
+    all_values = []
+    for variety in varieties:
+        subset = df_ranking[df_ranking['variety'] == variety].copy()
+        for param in PARAMETER_ORDER:
+            param_row = subset[subset['parameter'] == param]
+            if len(param_row) > 0:
+                row = param_row.iloc[0]
+                f_raw = np.clip(row['f_statistic'], 0, 1000)
+                eta_raw = row['eta_squared'] * 100
+                pct_raw = np.abs(row['pct_change_C_to_S2'])
+                all_values.extend([f_raw, eta_raw, pct_raw])
+
+    all_values = np.array(all_values)
+    all_values = np.nan_to_num(all_values, nan=0.0)
+    return max(100, np.nanmax(all_values))
+
+
+def plot_heatmap(ax, df_ranking, variety, panel_label, show_yticklabels=True, show_colorbar=True, vmax_global=None):
     """
     Plot heatmap for a variety
     show_yticklabels: show Y axis labels (only for panel a)
     show_colorbar: show colorbar (only for panel b)
+    vmax_global: shared vmax across all panels for consistent color scale
     """
     # Filter by variety
     subset = df_ranking[df_ranking['variety'] == variety].copy()
@@ -129,8 +151,8 @@ def plot_heatmap(ax, df_ranking, variety, panel_label, show_yticklabels=True, sh
     # Combined Score not shown (already in Table S2)
     metric_labels = ['F-statistic', 'Effect size η²\n(%)', '% Change']
 
-    # Dynamic vmax based on data (F-statistic can be >> 100)
-    vmax_val = max(100, np.nanmax(scores))  # At least 100, or data max
+    # Use global vmax for consistent color scale across panels
+    vmax_val = vmax_global if vmax_global is not None else max(100, np.nanmax(scores))
 
     # Create heatmap - LARGER FONTS
     sns.heatmap(
@@ -203,6 +225,11 @@ def main():
     print("\n📊 Loading ranking data...")
     df_ranking = load_ranking_data()
 
+    # Compute global vmax for consistent color scale across both panels
+    print("\n📏 Computing global vmax for consistent color scale...")
+    vmax_global = compute_global_vmax(df_ranking, varieties=['WR10', 'CV'])
+    print(f"   Global vmax = {vmax_global:.1f}")
+
     # Create figure with GridSpec to balance widths
     # Panel a) has Y labels but NO colorbar
     # Panel b) has colorbar but NO Y labels
@@ -221,11 +248,11 @@ def main():
 
     # Panel a) WR10 - with Y labels, without colorbar
     print("  Plotting panel a: WR10")
-    plot_heatmap(ax1, df_ranking, 'WR10', 'a', show_yticklabels=True, show_colorbar=False)
+    plot_heatmap(ax1, df_ranking, 'WR10', 'a', show_yticklabels=True, show_colorbar=False, vmax_global=vmax_global)
 
     # Panel b) CV - without Y labels, with colorbar
     print("  Plotting panel b: CV")
-    plot_heatmap(ax2, df_ranking, 'CV', 'b', show_yticklabels=False, show_colorbar=True)
+    plot_heatmap(ax2, df_ranking, 'CV', 'b', show_yticklabels=False, show_colorbar=True, vmax_global=vmax_global)
 
     # Increase colorbar label font - EVEN LARGER
     cbar = ax2.collections[0].colorbar
