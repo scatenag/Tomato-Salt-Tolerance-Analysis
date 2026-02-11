@@ -6,7 +6,7 @@ Linear (a, c) and exponential (b) regression describes dose-response comparison
 between WR10 (S. pimpinellifolium) and CV (S. lycopersicum) for:
 - a) Main shoot height (cm) - Performance Maintenance (top parameter)
 - b) Stomatal conductance (μmol/sec) - Physiological Stability (top parameter)
-- c) Na/K ratio leaves - Stress Marker Response (top parameter)
+- c) Electrolytic leakage (μS/cm) - Stress Marker Response (top parameter)
 
 under Control (C) and Salinity Stress (S1, S2) conditions.
 
@@ -394,16 +394,15 @@ def main():
         r2_pos='upper right'
     )
 
-    # c) Na/K ratio leaves - LINEAR (strong linear increase with salinity)
-    print("  Plotting panel c: Na/K ratio leaves")
-    plot_linear_regression(
+    # c) Electrolytic leakage - EXPONENTIAL (grows exponentially with salinity)
+    print("  Plotting panel c: Electrolytic leakage")
+    plot_exponential_regression(
         axes[2], df,
-        parameter='Na/K ratio leaves',
-        y_label='Na/K ratio leaves',
-        title='Na/K Ratio Leaves Comparison',
+        parameter='Electrolytic leakage (μS/cm)',
+        y_label='Electrolytic leakage (μS/cm)',
+        title='Electrolytic Leakage Comparison',
         panel_label='c',
         category_name='Stress Marker Response',
-        legend_loc='upper left',
         r2_pos='lower right'
     )
 
