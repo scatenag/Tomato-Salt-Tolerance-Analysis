@@ -59,3 +59,4 @@ Thumbs.db
 
 # Development/cleanup files
 CLEANUP_PLAN.md
+.claude/
